@@ -74,8 +74,36 @@ def create_persons():
     surname = request.get_json()["surname"]
     dni = request.get_json()["dni"]
     email = request.get_json()["email"]
+
+    # consulta si esxite ese email
+    cur = mysql.connection.cursor()
+    cur.execute('SELECT * FROM person WHERE email = %s',(email,))
+    # cur.execute('SELECT * FROM person WHERE dni = {0}'.format(dni))
+    row = cur.fetchone()
+    
+    if row:
+        return jsonify({"message": "email ya registrado"})
+
+
     """ INSERT INTO """
-    return jsonify({"name":name ,"surname":surname ,"dni":dni ,"email":email})
+    # cursor
+    cur = mysql.connection.cursor()
+    
+    # formateada con %s
+    cur.execute('INSERT INTO person (name, surname,dni,email) VALUES (%s, %s, %s, %s)',(name, surname, dni, email))
+    
+    #aca graba en la BD
+    mysql.connection.commit()
+
+    """ OBTENER EL ID DEL REGISTRO CREADO """
+    # no se mostraba el id porque era automatico
+    cur.execute('SELECT LAST_INSERT_ID()')
+    row = cur.fetchone()
+    print(row[0])
+    # guardo el id en una vrable entonce4s lo puede mostrar en la api con el id que le puso
+    id = row[0]
+
+    return jsonify({"name":name ,"surname":surname ,"dni":dni ,"email":email, "id": id})
 
 # consultar una personal en particular
 @app.route('/persons/<int:id>',methods =['GET'])
@@ -102,7 +130,13 @@ def update_persons(id):
     dni = request.get_json()["dni"]
     email = request.get_json()["email"]
 
-    """ update where"""
+    """ update where modoficar los datos """
+    cur = mysql.connection.cursor()
+    cur.execute('UPDATE  person SET name = %s, surname = %s, dni = %s, email = %s WHERE id = %s',(name, surname, dni, email, id))
+
+    # esta sentencia ejecuta en la BD
+    mysql.connection.commit()
+
     return jsonify({"name":name ,"surname":surname ,"dni":dni ,"email":email})
 
 
@@ -110,8 +144,16 @@ def update_persons(id):
 
 @app.route('/persons/<int:id>',methods = ['DELETE'])
 def remove_persons(id):
+    
     """ delete bd"""
-    return jsonify ({"messaje":"borrado"})
+    cur = mysql.connection.cursor()
+    cur.execute('DELETE FROM person WHERE id = {0}'.format(id))
+    
+    # esta sentencia ejecuta en la BD
+    mysql.connection.commit()
+
+    
+    return jsonify ({"messaje":"borrado", "id":id})
 
 if __name__ =="__main__":   # solo se ejecute desde el archivo app.py y no s epueda importar y debe ser lo ultimo
     app.run(debug=True, port=5000)  # esta en modo desarrollo por debug
