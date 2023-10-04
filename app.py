@@ -6,6 +6,8 @@ from person import Person
 import jwt  # para las claves de usuario
 import datetime
 
+from functools import wraps 
+
 
 app = Flask(__name__)
 
@@ -36,17 +38,55 @@ def login():
     if not row:
         return jsonify({"message":"Noi autorizado"},401)
     
+    # ese token es el que depues se solicitara
     token = jwt.encode({'id': row[0],
-                        'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=5)}, app.config['SECRET_KEY']  )    # consultar fecha para darle un tiempo de vida a la seccion antes que tenga que volver a loguearse
+                        'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=5)}, app.config['SECRET_KEY']  )    
+    # consultar fecha para darle un tiempo de vida a la seccion antes que tenga que volver a loguearse
                         
                         
     
 
     # Hasta aca el usuario esta bien logueado
-    return jsonify({"TOKEN":token, "message":"Login"})
+    return jsonify({"TOKEN":token, "username": auth.username})
 
 
 # ----------------------------------------------------------------------------------------------------------------
+#                                 VERIFICADOR DE TOKEN
+# uso del WRAPS  
+
+def token_requiered(func):
+    @wraps(func)
+    def decorated(*args, **kwargs):
+        print(kwargs)
+        token= None
+        # id = kwargs['id']
+        # if id < 10:
+        #     return jsonify({"messaje": "el id debe ser mayor a 10"})
+        
+        if 'x-access-token' in request.headers:
+            token = request.headers['x-access-token']
+
+        if not token:
+            return jsonify({ "message": "Falta el Token"}), 401
+        
+        try:
+            data = jwt.decode(token , app.config['SECRET_KEY'], algorithms=['HS256'])
+        except Exception as e:
+            print(e)
+            return jsonify({"message": str(e)}),401
+
+        
+
+        return func(*args, **kwargs)
+    return decorated
+
+@app.route('/test/<int:id>')
+@token_requiered
+def test(id):
+    return jsonify({"messsage":"Test"})
+
+# ------------------------------------------------------------------------------------------------------
+
 @app.route('/')
 def index():
     return 'index'

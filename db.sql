@@ -28,4 +28,4 @@ CREATE TABLE IF NOT EXISTS users(
     PRIMARY KEY (id)
 ); 
 INSERT INTO users VALUES
-(1, 'admin', 'admin'),
+(1, 'admin', 'admin')
