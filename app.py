@@ -4,6 +4,7 @@ from markupsafe import escape
 from flask_mysqldb import MySQL
 from person import Person
 import jwt  # para las claves de usuario
+import datetime
 
 
 app = Flask(__name__)
@@ -30,14 +31,19 @@ def login():
     # Control: exite y coincide el usuario en la BD
     cur = mysql.connection.cursor()
     cur.execute('SELECT * FROM users WHERE username=%s and password=%s' , (auth.username,auth.password))
-    row = cur.fetchone()
+    row = cur.fetchone() # obtengo el id nombre y pass
 
     if not row:
         return jsonify({"message":"Noi autorizado"},401)
     
+    token = jwt.encode({'id': row[0],
+                        'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=5)}, app.config['SECRET_KEY']  )    # consultar fecha para darle un tiempo de vida a la seccion antes que tenga que volver a loguearse
+                        
+                        
+    
 
     # Hasta aca el usuario esta bien logueado
-    return jsonify({"message":"Login"})
+    return jsonify({"TOKEN":token, "message":"Login"})
 
 
 # ----------------------------------------------------------------------------------------------------------------
