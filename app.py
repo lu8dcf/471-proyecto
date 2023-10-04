@@ -3,6 +3,8 @@ from markupsafe import escape
 
 from flask_mysqldb import MySQL
 from person import Person
+import jwt  # para las claves de usuario
+
 
 app = Flask(__name__)
 
@@ -11,8 +13,34 @@ app.config['MYSQL_USER'] = 'admin'
 app.config['MYSQL_PASSWORD'] ='admin'
 app.config['MYSQL_DB'] = 'ejemplo'
 
+app.config['SECRET_KEY'] = 'app_123'
+
 mysql = MySQL(app)
 
+#------------------------------------------LOGIN -------------------------------------
+@app.route('/login', methods = ['POST'])
+def login():
+    auth = request.authorization
+    print(auth)
+
+    # control:  que se hallan cargado datos para autenticacion
+    if not auth or not auth.username or not auth.password:
+        return jsonify({"message":"Faltan Datos"},401)
+
+    # Control: exite y coincide el usuario en la BD
+    cur = mysql.connection.cursor()
+    cur.execute('SELECT * FROM users WHERE username=%s and password=%s' , (auth.username,auth.password))
+    row = cur.fetchone()
+
+    if not row:
+        return jsonify({"message":"Noi autorizado"},401)
+    
+
+    # Hasta aca el usuario esta bien logueado
+    return jsonify({"message":"Login"})
+
+
+# ----------------------------------------------------------------------------------------------------------------
 @app.route('/')
 def index():
     return 'index'
@@ -76,7 +104,11 @@ def create_persons():
     email = request.get_json()["email"]
 
     # consulta si esxite ese email
+
+    # conexion con la BD
     cur = mysql.connection.cursor()
+
+
     cur.execute('SELECT * FROM person WHERE email = %s',(email,))
     # cur.execute('SELECT * FROM person WHERE dni = {0}'.format(dni))
     row = cur.fetchone()
